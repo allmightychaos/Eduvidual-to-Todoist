@@ -71,7 +71,6 @@ export default async (req: Request) => {
             
             const shiftedDate = new Date(originalDate.getTime() - (24 * 60 * 60 * 1000));
             
-            // Build rich description
             let taskDescription = "";
             if (eventDescription) taskDescription += `${eventDescription}\n\n`;
             if (eventUrl) taskDescription += `🔗 Link: ${eventUrl}`;
@@ -91,13 +90,15 @@ export default async (req: Request) => {
             console.log(`Creating task: "${summary}" | Due: ${taskArgs.dueDate || taskArgs.dueDatetime}`);
             try {
                 await todoist.addTask(taskArgs);
+                
+                // OPTIMIZATION: Incremental state saving prevents timeout data loss
                 processedSet.add(uid);
+                await store.setJSON("processed-events", Array.from(processedSet));
+                
             } catch (taskError: any) {
                 console.error(`Failed to create task ${summary}:`, taskError);
             }
         }
-        
-        await store.setJSON("processed-events", Array.from(processedSet));
         
         console.log("Sync completed successfully.");
         await store.setJSON("latest", { timestamp: new Date().toISOString(), status: "success" });
