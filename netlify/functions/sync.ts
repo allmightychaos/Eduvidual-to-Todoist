@@ -33,46 +33,62 @@ export default async (req: Request) => {
         const eventList = Object.values(events).filter(e => e && e.type === 'VEVENT');
         console.log(`Found ${eventList.length} events in feed.`);
         
-        console.log("Fetching Todoist tasks...");
-        let tasksResponse;
+        // --- OPTIMIZATION 1: Fetch processed UIDs from Blob instead of querying Todoist ---
+        let processedIds: string[] = [];
         try {
-            tasksResponse = await todoist.getTasks(projectId ? { projectId } : undefined);
-        } catch (todoistError: any) {
-            console.error("Failed to fetch Todoist tasks:", todoistError);
-            const errMsg = todoistError?.responseData?.error || todoistError.message || String(todoistError);
-            await store.setJSON("latest", { timestamp: new Date().toISOString(), status: `error: Failed to connect to Todoist API - ${errMsg}` });
-            return new Response("Todoist error", { status: 500 });
+            const storedIds = await store.get("processed-events", { type: "json" });
+            if (Array.isArray(storedIds)) {
+                processedIds = storedIds;
+            }
+        } catch (e) {
+            console.log("No processed events found, starting fresh.");
         }
-
-        const activeTaskNames = new Set(tasksResponse.results ? tasksResponse.results.map((t: any) => t.content) : tasksResponse.map((t: any) => t.content));
+        const processedSet = new Set(processedIds);
         
         for (const item of eventList) {
             const eventItem = item as any;
             const summary = eventItem.summary;
             const end = eventItem.end;
+            const uid = eventItem.uid;
             
-            if (!summary || !end) continue;
+            if (!summary || !end || !uid) continue;
             
-            if (activeTaskNames.has(summary)) {
-                console.log(`Skipping duplicate task: ${summary}`);
+            // --- OPTIMIZATION 2: Check our internal database to prevent the "completed task" bug ---
+            if (processedSet.has(uid)) {
+                console.log(`Skipping already processed task: ${summary}`);
                 continue;
             }
             
             const originalDate = new Date(end);
             const shiftedDate = new Date(originalDate.getTime() - (24 * 60 * 60 * 1000));
             
-            console.log(`Creating task: "${summary}" | Due: ${shiftedDate.toISOString()}`);
+            // --- OPTIMIZATION 3: Handle All-Day vs Specific Time Events ---
+            const taskArgs: any = {
+                content: summary,
+                ...(projectId && { projectId })
+            };
+
+            if (eventItem.datetype === 'date') {
+                // It's an All-Day event, send just the YYYY-MM-DD
+                taskArgs.dueDate = shiftedDate.toISOString().split('T')[0];
+            } else {
+                // It has a specific time, send the exact Datetime (RFC3339)
+                taskArgs.dueDatetime = shiftedDate.toISOString();
+            }
+            
+            console.log(`Creating task: "${summary}" | Due: ${taskArgs.dueDate || taskArgs.dueDatetime}`);
             try {
-                await todoist.addTask({
-                    content: summary,
-                    dueDate: shiftedDate.toISOString().split('T')[0],
-                    ...(projectId && { projectId })
-                });
+                await todoist.addTask(taskArgs);
+                
+                // Add the UID to our tracking Set so we never duplicate it again
+                processedSet.add(uid);
             } catch (taskError: any) {
                 console.error(`Failed to create task ${summary}:`, taskError);
-                // We don't abort the whole run if one task fails, but we could log it
             }
         }
+        
+        // Save the updated list of processed IDs back to the database
+        await store.setJSON("processed-events", Array.from(processedSet));
         
         console.log("Sync completed successfully.");
         await store.setJSON("latest", { timestamp: new Date().toISOString(), status: "success" });
