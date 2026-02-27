@@ -1,42 +1,23 @@
 import { getStore } from '@netlify/blobs';
 import { TodoistApi, AddTaskArgs } from '@doist/todoist-api-typescript';
 import ical, { VEvent } from 'node-ical';
-import * as https from 'https';
 
-const fetchIcalViaHttps = (url: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const req = https.get(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'Accept': 'text/calendar, text/plain, */*',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Connection': 'keep-alive'
-            },
-            timeout: 8000
-        }, (res) => {
-            if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                // follow 1 redirect
-                resolve(fetchIcalViaHttps(res.headers.location));
-                return;
-            }
-            
-            if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
-                res.resume(); // consume response data to free up memory
-                reject(new Error(`HTTP Error ${res.statusCode}: ${res.statusMessage}`));
-                return;
-            }
-            
-            let data = '';
-            res.on('data', (chunk) => data += chunk);
-            res.on('end', () => resolve(data));
-        });
-        
-        req.on('error', (e) => reject(e));
-        req.on('timeout', () => {
-            req.destroy();
-            reject(new Error('HTTPS connection timed out (8000ms limit reached)'));
-        });
-    });
+const fetchIcalViaProxy = async (): Promise<string> => {
+    const siteUrl = process.env.URL;
+    if (!siteUrl) {
+        throw new Error('URL env var not set — cannot resolve proxy endpoint');
+    }
+
+    const proxyUrl = `${siteUrl}/ical-proxy`;
+    console.log(`Fetching iCal via edge proxy: ${proxyUrl}`);
+
+    const res = await fetch(proxyUrl);
+    if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(`Proxy returned ${res.status}: ${body}`);
+    }
+
+    return res.text();
 };
 
 export const runSync = async (): Promise<Response> => {
@@ -45,10 +26,9 @@ export const runSync = async (): Promise<Response> => {
     try {
         console.log("Sync started...");
         const todoistToken = process.env.TODOIST_API_TOKEN;
-        const icalUrl = process.env.EDUVIDUAL_ICAL_URL;
         const projectId = process.env.TODOIST_PROJECT_ID;
         
-        if (!todoistToken || !icalUrl) {
+        if (!todoistToken) {
             console.error("Missing environment variables.");
             await store.setJSON("latest", { timestamp: new Date().toISOString(), status: "error: missing env vars" });
             return new Response("Missing env vars", { status: 500 });
@@ -56,21 +36,11 @@ export const runSync = async (): Promise<Response> => {
         
         const todoist = new TodoistApi(todoistToken);
         
-        console.log("Fetching iCal feed...");
-        
-        // Log partially redacted URL for debug
-        try {
-            const parsedUrl = new URL(icalUrl);
-            console.log(`Target: ${parsedUrl.protocol}//${parsedUrl.hostname}${parsedUrl.pathname}...`);
-        } catch (e) {
-            console.error("Invalid EDUVIDUAL_ICAL_URL format.");
-            await store.setJSON("latest", { timestamp: new Date().toISOString(), status: "error: Invalid URL format in EDUVIDUAL_ICAL_URL" });
-            return new Response("Invalid URL", { status: 500 });
-        }
+        console.log("Fetching iCal feed via edge proxy...");
 
         let events;
         try {
-            const icalData = await fetchIcalViaHttps(icalUrl);
+            const icalData = await fetchIcalViaProxy();
             events = await ical.async.parseICS(icalData);
         } catch (icalError: unknown) {
             console.error("Failed to fetch or parse iCal URL:", icalError);
