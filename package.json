@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@doist/todoist-api-typescript": "^6.8.1",
+    "@netlify/blobs": "^10.7.0",
     "@netlify/functions": "^5.1.2",
     "node-ical": "^0.25.4"
   }
