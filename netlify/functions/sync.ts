@@ -10,6 +10,7 @@ export default async (req: Request) => {
         console.log("Sync started...");
         const todoistToken = process.env.TODOIST_API_TOKEN;
         const icalUrl = process.env.EDUVIDUAL_ICAL_URL;
+        const projectId = process.env.TODOIST_PROJECT_ID;
         
         if (!todoistToken || !icalUrl) {
             console.error("Missing environment variables.");
@@ -21,7 +22,7 @@ export default async (req: Request) => {
         const events = await ical.async.fromURL(icalUrl);
         const eventList = Object.values(events).filter(e => e && e.type === 'VEVENT');
         
-        const tasksResponse = await todoist.getTasks();
+        const tasksResponse = await todoist.getTasks(projectId ? { projectId } : undefined);
         const activeTaskNames = new Set(tasksResponse.results.map((t: any) => t.content));
         
         for (const item of eventList) {
@@ -43,6 +44,7 @@ export default async (req: Request) => {
             await todoist.addTask({
                 content: summary,
                 dueDate: shiftedDate.toISOString().split('T')[0],
+                ...(projectId && { projectId })
             });
         }
         
