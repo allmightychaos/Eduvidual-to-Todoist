@@ -52,7 +52,6 @@ export default async (req: Request) => {
             const end = eventItem.end;
             const uid = eventItem.uid;
             
-            // Extract URL and Description
             const eventUrl = eventItem.url;
             const eventDescription = eventItem.description;
             
@@ -72,8 +71,14 @@ export default async (req: Request) => {
             
             const shiftedDate = new Date(originalDate.getTime() - (24 * 60 * 60 * 1000));
             
+            // Build rich description
+            let taskDescription = "";
+            if (eventDescription) taskDescription += `${eventDescription}\n\n`;
+            if (eventUrl) taskDescription += `🔗 Link: ${eventUrl}`;
+            
             const taskArgs: any = {
                 content: summary,
+                description: taskDescription.trim(),
                 ...(projectId && { projectId })
             };
 
