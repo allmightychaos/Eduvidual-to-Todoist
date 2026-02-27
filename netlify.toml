@@ -5,3 +5,8 @@
 [functions]
   node_bundler = "esbuild"
 
+[functions.force]
+  timeout = 26
+
+[functions.sync]
+  timeout = 26
