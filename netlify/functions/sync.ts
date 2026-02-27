@@ -1,9 +1,9 @@
-import { schedule } from '@netlify/functions';
-import { TodoistApi } from '@doist/todoist-api-typescript';
 import { getStore } from '@netlify/blobs';
+import { TodoistApi } from '@doist/todoist-api-typescript';
+import type { Config } from "@netlify/functions";
 import ical from 'node-ical';
 
-export const handler = schedule("0 * * * *", async (event) => {
+export default async (req: Request) => {
     const store = getStore("sync-state");
     
     try {
@@ -14,7 +14,7 @@ export const handler = schedule("0 * * * *", async (event) => {
         if (!todoistToken || !icalUrl) {
             console.error("Missing environment variables.");
             await store.setJSON("latest", { timestamp: new Date().toISOString(), status: "error (missing env vars)" });
-            return { statusCode: 500 };
+            return new Response("Missing env vars", { status: 500 });
         }
         
         const todoist = new TodoistApi(todoistToken);
@@ -48,10 +48,14 @@ export const handler = schedule("0 * * * *", async (event) => {
         
         console.log("Sync completed successfully.");
         await store.setJSON("latest", { timestamp: new Date().toISOString(), status: "success" });
-        return { statusCode: 200 };
+        return new Response("OK", { status: 200 });
     } catch (error) {
         console.error("Error during sync:", error);
-        await store.setJSON("latest", { timestamp: new Date().toISOString(), status: "error" });
-        return { statusCode: 500 };
+        await store.setJSON("latest", { timestamp: new Date().toISOString(), status: "error (sync failed)" });
+        return new Response("Error", { status: 500 });
     }
-});
+};
+
+export const config: Config = {
+    schedule: "0 * * * *"
+};
