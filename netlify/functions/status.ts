@@ -1,7 +1,6 @@
 import { getStore } from "@netlify/blobs";
-import type { Context } from "@netlify/functions";
 
-export default async (req: Request, context: Context) => {
+export default async (req: Request) => {
     try {
         const url = new URL(req.url);
         const password = url.searchParams.get("pwd");
