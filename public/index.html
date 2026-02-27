@@ -197,7 +197,14 @@
             let pwdToUse = isManualSubmit ? pwdInput : (storedPwd || '');
 
             try {
-                const response = await fetch(`/.netlify/functions/status${pwdToUse ? '?pwd=' + encodeURIComponent(pwdToUse) : ''}`);
+                // Add a cache-buster parameter to ensure we get live data
+                const cacheBuster = new Date().getTime();
+                let url = `/.netlify/functions/status?_t=${cacheBuster}`;
+                if (pwdToUse) {
+                    url += `&pwd=${encodeURIComponent(pwdToUse)}`;
+                }
+
+                const response = await fetch(url);
                 const data = await response.json();
                 
                 const timeValue = document.getElementById('timeValue');
