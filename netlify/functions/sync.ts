@@ -1,7 +1,7 @@
 import { getStore } from '@netlify/blobs';
-import { TodoistApi } from '@doist/todoist-api-typescript';
+import { TodoistApi, AddTaskArgs } from '@doist/todoist-api-typescript';
 import type { Config } from "@netlify/functions";
-import ical from 'node-ical';
+import ical, { VEvent } from 'node-ical';
 
 export default async (req: Request) => {
     const store = getStore("sync-state");
@@ -24,9 +24,10 @@ export default async (req: Request) => {
         let events;
         try {
             events = await ical.async.fromURL(icalUrl);
-        } catch (icalError: any) {
+        } catch (icalError: unknown) {
             console.error("Failed to fetch or parse iCal URL:", icalError);
-            await store.setJSON("latest", { timestamp: new Date().toISOString(), status: `error: Failed to fetch iCal feed - ${icalError.message || icalError}` });
+            const errorMessage = icalError instanceof Error ? icalError.message : String(icalError);
+            await store.setJSON("latest", { timestamp: new Date().toISOString(), status: `error: Failed to fetch iCal feed - ${errorMessage}` });
             return new Response("iCal error", { status: 500 });
         }
         
@@ -47,13 +48,13 @@ export default async (req: Request) => {
         const now = new Date();
 
         for (const item of eventList) {
-            const eventItem = item as any;
-            const summary = eventItem.summary;
+            const eventItem = item as VEvent;
+            const summary = typeof eventItem.summary === 'string' ? eventItem.summary : eventItem.summary?.val;
             const end = eventItem.end;
             const uid = eventItem.uid;
             
-            const eventUrl = eventItem.url;
-            const eventDescription = eventItem.description;
+            const eventUrl = typeof eventItem.url === 'string' ? eventItem.url : (eventItem.url as { val?: string } | undefined)?.val;
+            const eventDescription = typeof eventItem.description === 'string' ? eventItem.description : (eventItem.description as { val?: string } | undefined)?.val;
             
             if (!summary || !end || !uid) continue;
 
@@ -75,17 +76,15 @@ export default async (req: Request) => {
             if (eventDescription) taskDescription += `${eventDescription}\n\n`;
             if (eventUrl) taskDescription += `🔗 Link: ${eventUrl}`;
             
-            const taskArgs: any = {
+            const taskArgs: AddTaskArgs = {
                 content: summary,
                 description: taskDescription.trim(),
-                ...(projectId && { projectId })
+                ...(projectId && { projectId }),
+                ...(eventItem.datetype === 'date' 
+                    ? { dueDate: shiftedDate.toISOString().split('T')[0] }
+                    : { dueDatetime: shiftedDate.toISOString() }
+                )
             };
-
-            if (eventItem.datetype === 'date') {
-                taskArgs.dueDate = shiftedDate.toISOString().split('T')[0];
-            } else {
-                taskArgs.dueDatetime = shiftedDate.toISOString();
-            }
             
             console.log(`Creating task: "${summary}" | Due: ${taskArgs.dueDate || taskArgs.dueDatetime}`);
             try {
@@ -95,7 +94,7 @@ export default async (req: Request) => {
                 processedSet.add(uid);
                 await store.setJSON("processed-events", Array.from(processedSet));
                 
-            } catch (taskError: any) {
+            } catch (taskError: unknown) {
                 console.error(`Failed to create task ${summary}:`, taskError);
             }
         }
@@ -103,9 +102,10 @@ export default async (req: Request) => {
         console.log("Sync completed successfully.");
         await store.setJSON("latest", { timestamp: new Date().toISOString(), status: "success" });
         return new Response("OK", { status: 200 });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Critical Error during sync:", error);
-        await store.setJSON("latest", { timestamp: new Date().toISOString(), status: `error: Critical Sync Failure - ${error.message || String(error)}` });
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        await store.setJSON("latest", { timestamp: new Date().toISOString(), status: `error: Critical Sync Failure - ${errorMessage}` });
         return new Response("Error", { status: 500 });
     }
 };
