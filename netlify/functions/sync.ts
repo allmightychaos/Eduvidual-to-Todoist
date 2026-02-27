@@ -14,12 +14,14 @@ export const handler = schedule("0 * * * *", async (event) => {
         }
         
         const todoist = new TodoistApi(todoistToken);
-        console.log("Todoist API client initialized.");
         
-        console.log(`Fetching iCal feed...`);
         const events = await ical.async.fromURL(icalUrl);
         const eventList = Object.values(events).filter(e => e.type === 'VEVENT');
-        console.log(`Found ${eventList.length} events in feed.`);
+        
+        console.log(`Fetching active Todoist tasks...`);
+        const activeTasks = await todoist.getTasks();
+        const activeTaskNames = new Set(activeTasks.map(t => t.content));
+        console.log(`Found ${activeTasks.length} active tasks.`);
         
         return { statusCode: 200 };
     } catch (error) {
