@@ -300,26 +300,29 @@
         async function triggerForceSync() {
             const btn = document.getElementById('forceSyncBtn');
             const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<svg class="icon spin" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Syncing...';
+            btn.innerHTML = '<svg class="icon spin" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Triggering...';
             btn.disabled = true;
             btn.style.opacity = '0.7';
             btn.style.cursor = 'wait';
 
-            let pwdToUse = getCookie('authPwd');
             try {
-                const response = await fetch(`/do-sync`, { method: 'POST' });
+                const response = await fetch('/.netlify/functions/trigger-sync', { method: 'POST' });
+                const data = await response.json();
+                if (response.ok) {
+                    btn.innerHTML = '<svg class="icon" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg> Triggered! (check back in ~1 min)';
+                } else {
+                    btn.innerHTML = '<svg class="icon" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"/></svg> Error: ' + (data.error || 'unknown');
+                }
             } catch (error) {
-                // fetchStatus() below will reflect the outcome
+                btn.innerHTML = '<svg class="icon" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"/></svg> Connection Error';
             }
 
-            // Wait briefly to allow Netlify Blobs strong consistency to propagate
-            await new Promise(r => setTimeout(r, 1500));
-            await fetchStatus();
-
-            btn.innerHTML = originalHtml;
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.style.cursor = 'pointer';
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            }, 5000);
         }
 
         // Initial Load
