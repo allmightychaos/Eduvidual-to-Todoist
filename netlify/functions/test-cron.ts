@@ -34,7 +34,11 @@ export default async (_req: Request) => {
     } catch (err) {
         const elapsed = Date.now() - start;
         const msg = err instanceof Error ? err.message : String(err);
-        return new Response(JSON.stringify({ error: msg, elapsed_ms: elapsed }), {
+        const cause = (err as any)?.cause;
+        const causeMsg = cause instanceof Error
+            ? `${cause.constructor.name}: ${cause.message}`
+            : cause != null ? String(cause) : undefined;
+        return new Response(JSON.stringify({ error: msg, cause: causeMsg, elapsed_ms: elapsed }), {
             status: 500,
             headers: { "Content-Type": "application/json" },
         });
