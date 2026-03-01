@@ -84,17 +84,6 @@ export default async function handler(req: Request): Promise<Response> {
         return new Response("Method Not Allowed", { status: 405 });
     }
 
-    const url = new URL(req.url);
-    const password = url.searchParams.get("pwd");
-    const correctPassword = Netlify.env.get("STATUS_PASSWORD");
-
-    if (!correctPassword || password !== correctPassword) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-            status: 401,
-            headers: { "Content-Type": "application/json" },
-        });
-    }
-
     const store = getStore("sync-state");
     const timestamp = new Date().toISOString();
 

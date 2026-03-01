@@ -307,7 +307,7 @@
 
             let pwdToUse = getCookie('authPwd');
             try {
-                const response = await fetch(`/do-sync?pwd=${encodeURIComponent(pwdToUse)}`, { method: 'POST' });
+                const response = await fetch(`/do-sync`, { method: 'POST' });
             } catch (error) {
                 // fetchStatus() below will reflect the outcome
             }
