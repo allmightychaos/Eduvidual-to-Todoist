@@ -12,7 +12,7 @@ Tired of manually checking Moodle for deadlines? This tool pulls your Eduvidual 
 ## Features
 
 - **No secrets in code**: API keys, calendar URLs, and passwords all live in environment variables. The repo is fully public and safe to share.
-- **Hourly auto-sync**: A GitHub Actions cron job fires every hour and triggers the sync - no manual intervention needed.
+- **Auto-sync every 3 hours**: A GitHub Actions cron job fires every 3 hours and triggers the sync - no manual intervention needed.
 - **No duplicate tasks**: Each assignment is tracked by its unique iCal ID. The same task will never appear in Todoist twice, even across multiple syncs.
 - **Built-in 24h buffer**: Every deadline is shifted back by exactly 24 hours - because "due tomorrow" is already cutting it close.
 
@@ -42,7 +42,15 @@ During setup you'll be asked for:
 - `EDUVIDUAL_ICAL_URL` - the calendar URL from Step 1
 - `TODOIST_API_TOKEN` - the API token from Step 2
 
-### 4. Optional configuration
+### 4. Add the GitHub Actions secret
+
+The cron job that triggers the sync needs your `STATUS_PASSWORD` to authenticate with the endpoint. Without this, every scheduled run will fail with a 401.
+
+1. Go to your forked repo on GitHub → **Settings** → **Secrets and variables** → **Actions**.
+2. Click **New repository secret**.
+3. Name: `STATUS_PASSWORD`, Value: the same password you set in Netlify.
+
+### 5. Optional configuration
 
 #### Sync to a specific Todoist project
 
