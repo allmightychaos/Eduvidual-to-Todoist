@@ -79,3 +79,14 @@ The Worker has two entry points:
 State is stored in Cloudflare KV under two keys:
 - `"latest"` - `{ timestamp, status }` of the most recent sync
 - `"processed-events"` - array of already-synced iCal UIDs (prevents duplicates)
+
+---
+
+| Stat | Value |
+|---|---|
+| Total lines of code | 687 |
+| Worker bundle size | 6.97 KB (2.50 KB gzip) |
+
+---
+
+<p align="center">Made with ❤️ by Chaos <em>(with the help of Claude)</em></p>
