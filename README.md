@@ -79,7 +79,7 @@ The Worker has two entry points:
 - **`scheduled()`** - runs every 3 hours via cron trigger, calls `runSync()`
 - **`fetch()`** - handles HTTP requests:
   - `GET /api/status` - returns latest sync state from KV
-  - `GET /api/sync` - runs sync immediately (auth-gated if `STATUS_PASSWORD` is set)
+  - `POST /api/sync` - runs sync immediately (auth-gated if `STATUS_PASSWORD` is set)
   - Everything else - served from `public/` as static assets
 
 State is stored in Cloudflare KV under two keys:
