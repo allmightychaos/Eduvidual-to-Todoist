@@ -89,8 +89,8 @@ function parseEvents(icalText: string): VEvent[] {
 
 function isAuthorized(request: Request, env: Env): boolean {
     if (!env.STATUS_PASSWORD) return true;
-    const url = new URL(request.url);
-    return url.searchParams.get("pwd") === env.STATUS_PASSWORD;
+    const auth = request.headers.get("Authorization") ?? "";
+    return auth === `Bearer ${env.STATUS_PASSWORD}`;
 }
 
 // ─── Core sync logic ──────────────────────────────────────────────────────────
@@ -225,6 +225,13 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
 }
 
 async function handleSync(request: Request, env: Env): Promise<Response> {
+    if (request.method !== "POST") {
+        return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
+            status: 405,
+            headers: { "Content-Type": "application/json", "Allow": "POST" },
+        });
+    }
+
     if (!isAuthorized(request, env)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
@@ -237,7 +244,8 @@ async function handleSync(request: Request, env: Env): Promise<Response> {
         return Response.json({ ok: true, ...result });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        return new Response(JSON.stringify({ error: msg }), {
+        console.error("Sync error:", msg);
+        return new Response(JSON.stringify({ error: "Sync failed. Check Cloudflare logs for details." }), {
             status: 500,
             headers: { "Content-Type": "application/json" },
         });
