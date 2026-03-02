@@ -1,11 +1,13 @@
 {
   "name": "eduvidual-to-todoist",
-  "version": "1.1.0",
-  "description": "Netlify Scheduled Function that syncs Eduvidual (Moodle) calendar assignments to Todoist, shifting deadlines 24 hours earlier.",
+  "version": "2.0.0",
+  "description": "Cloudflare Worker that syncs Eduvidual (Moodle) calendar assignments to Todoist, shifting deadlines 24 hours earlier.",
   "author": "allmightychaos",
   "license": "CC-BY-NC-SA-4.0",
+  "type": "module",
   "keywords": [
-    "netlify",
+    "cloudflare",
+    "cloudflare-workers",
     "todoist",
     "moodle",
     "eduvidual",
@@ -13,15 +15,14 @@
     "automation"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "setup": "node scripts/setup.js",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@netlify/edge-functions": "^3.0.3",
-    "@types/node": "^25.3.2",
-    "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "@netlify/blobs": "^10.7.0"
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^3.101.0"
   }
 }
