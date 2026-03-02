@@ -10,6 +10,14 @@ import { dirname, join } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const tomlPath = join(__dirname, "..", "wrangler.toml");
 
+// Check first — avoid creating an orphaned namespace on re-runs
+const toml = readFileSync(tomlPath, "utf8");
+if (!toml.includes('id = "PLACEHOLDER"')) {
+    console.log("wrangler.toml already contains a real KV namespace ID. Nothing to do.");
+    console.log("If you want to re-run setup, manually restore 'id = \"PLACEHOLDER\"' in wrangler.toml first.");
+    process.exit(0);
+}
+
 console.log("Creating KV namespace SYNC_STATE...");
 
 let output;
@@ -32,12 +40,6 @@ if (!match) {
 
 const namespaceId = match[1];
 console.log(`Namespace ID: ${namespaceId}`);
-
-const toml = readFileSync(tomlPath, "utf8");
-if (!toml.includes('id = "PLACEHOLDER"')) {
-    console.log("wrangler.toml already patched (no PLACEHOLDER found). Skipping.");
-    process.exit(0);
-}
 
 const patched = toml.replace('id = "PLACEHOLDER"', `id = "${namespaceId}"`);
 writeFileSync(tomlPath, patched, "utf8");
