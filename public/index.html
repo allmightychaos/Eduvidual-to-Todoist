@@ -202,9 +202,21 @@
         }
 
         function getNextExecutionTime() {
-            const nextHour = new Date();
-            nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
-            return nextHour.toLocaleString();
+            const slots = [0, 3, 6, 9, 12, 15, 18, 21];
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            // Find the next slot strictly after now (accounting for current-hour slot + 5-min retry)
+            const nextSlotHour = slots.find(h => h > currentHour || (h === currentHour && currentMinute < 5));
+            const next = new Date(now);
+            if (nextSlotHour !== undefined) {
+                next.setHours(nextSlotHour, 0, 0, 0);
+            } else {
+                // Wrap to first slot of next day
+                next.setDate(next.getDate() + 1);
+                next.setHours(slots[0], 0, 0, 0);
+            }
+            return next.toLocaleString();
         }
 
         async function fetchStatus(isManualSubmit = false) {
