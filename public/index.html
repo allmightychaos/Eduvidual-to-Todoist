@@ -143,7 +143,7 @@
             <div id="logSection" class="log-section">
                 <div class="log-header">
                     <div class="time-label" style="margin:0; font-weight:600;">Debug Logs:</div>
-                    <button onclick="copyLogs()" style="padding: 0.25rem 0.5rem; font-size:0.75rem; background-color:#6b7280;">
+                    <button id="copyLogsBtn" onclick="copyLogs()" style="padding: 0.25rem 0.5rem; font-size:0.75rem; background-color:#6b7280;">
                         <svg class="icon" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"/></svg>
                         Copy
                     </button>
@@ -299,7 +299,7 @@
         function copyLogs() {
             const logs = document.getElementById('detailMessage').textContent;
             navigator.clipboard.writeText(logs).then(() => {
-                const btn = document.querySelector('.log-header button');
+                const btn = document.getElementById('copyLogsBtn');
                 const originalText = btn.innerHTML;
                 btn.innerHTML = '<svg class="icon" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg> Copied!';
                 setTimeout(() => btn.innerHTML = originalText, 2000);
